@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from datetime import datetime
+import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
@@ -21,15 +22,22 @@ if "page" not in st.session_state:
     st.session_state.page = "dashboard"
 
 with st.sidebar:
-    st.markdown("## MedAI")
+    st.markdown("<div class='brand-orb'></div>", unsafe_allow_html=True)
+    st.markdown("### Devlas")
+    st.caption("Production")
     nav_choice = st.radio(
         "Navigation",
-        ["Dashboard", "Predict", "Patients"],
+        ["Overview", "Predict", "Patients"],
         index=["dashboard", "predict", "patients"].index(st.session_state.page),
+        label_visibility="collapsed",
     )
-    st.caption("Switch sections inside the same app window.")
+    st.markdown("---")
+    st.markdown("<div class='side-link'>Companies</div>", unsafe_allow_html=True)
+    st.markdown("<div class='side-link'>Account</div>", unsafe_allow_html=True)
+    st.markdown("<div class='side-link'>Settings</div>", unsafe_allow_html=True)
+    st.markdown("<div class='side-link'>Reports</div>", unsafe_allow_html=True)
 
-page = nav_choice.lower()
+page = "dashboard" if nav_choice.lower() == "overview" else nav_choice.lower()
 st.session_state.page = page
 
 # ── CSS ─────────────────────────────────────────────────────────────────────────
@@ -37,8 +45,55 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display&display=swap');
 
-html, body, .stApp { font-family: 'DM Sans', sans-serif !important; background: #f5f6fa !important; }
+html, body, .stApp { font-family: 'DM Sans', sans-serif !important; background: #f3f5fb !important; }
 #MainMenu, footer { visibility: hidden; }
+
+/* Sidebar polish */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #17213b 0%, #1b2b4a 100%) !important;
+    border-right: 1px solid rgba(255,255,255,.07);
+}
+[data-testid="stSidebar"] * {
+    color: #d7deef !important;
+}
+[data-testid="stSidebar"] [data-baseweb="radio"] > div {
+    gap: 6px;
+}
+[data-testid="stSidebar"] [role="radiogroup"] label {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px;
+    padding: 8px 10px;
+}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {
+    background: rgba(95, 113, 255, .24);
+    border-color: rgba(124, 143, 255, .5);
+}
+[data-testid="stSidebar"] p {
+    font-size: 13px;
+}
+
+.brand-orb {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: linear-gradient(140deg, #7c86ff 0%, #5c66f5 100%);
+    margin-bottom: 8px;
+}
+
+.side-link {
+    font-size: 13px;
+    color: #9ca8c7;
+    padding: 7px 8px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    margin-bottom: 4px;
+}
+
+.side-link:hover {
+    background: rgba(255,255,255,.04);
+    border-color: rgba(255,255,255,.08);
+}
 
 /* Push ALL streamlit content right of the fixed nav */
 section.main > div.block-container,
@@ -105,24 +160,45 @@ div.block-container {
 .top-bar {
     display: flex; align-items: center; justify-content: space-between;
     margin-bottom: 26px;
+    background: #ffffff;
+    border: 1px solid #eceff8;
+    border-radius: 16px;
+    padding: 14px 18px;
+    box-shadow: 0 3px 14px rgba(26, 32, 72, .06);
 }
 .top-greeting h1 {
-    font-family: 'DM Serif Display', serif;
-    font-size: 24px; color: #1a1a2e; margin: 0; font-weight: 400;
+    font-size: 24px; color: #1a1a2e; margin: 0; font-weight: 700;
 }
 .top-greeting p { font-size: 12.5px; color: #aaa; margin: 3px 0 0; }
 .top-badge {
-    background: #fff; border: 1px solid #ebebeb; border-radius: 10px;
+    background: linear-gradient(180deg, #ffffff 0%, #f9faff 100%);
+    border: 1px solid #e2e6ff; border-radius: 10px;
     padding: 8px 14px; font-size: 12.5px; color: #555;
     font-weight: 500; display: inline-block; margin-left: 8px;
 }
 .top-badge b { color: #e84545; }
 
+.top-mini {
+    display: inline-block;
+    border: 1px solid #eceff8;
+    border-radius: 10px;
+    background: #fff;
+    padding: 8px 11px;
+    font-size: 12px;
+    margin-left: 8px;
+    color: #6b7185;
+}
+
 /* ── Stat Cards ── */
 .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
 .stat-card {
     background: #fff; border-radius: 16px; padding: 20px;
-    border: 1px solid #ebebeb; box-shadow: 0 2px 8px rgba(0,0,0,.04);
+    border: 1px solid #eceff8; box-shadow: 0 6px 16px rgba(29, 42, 109, .07);
+    transition: transform .16s ease, box-shadow .16s ease;
+}
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(29, 42, 109, .11);
 }
 .sc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .sc-icon {
@@ -140,7 +216,7 @@ div.block-container {
 /* ── Generic Card ── */
 .card {
     background: #fff; border-radius: 16px; padding: 22px 22px 18px;
-    border: 1px solid #ebebeb; box-shadow: 0 2px 8px rgba(0,0,0,.04); margin-bottom: 20px;
+    border: 1px solid #eceff8; box-shadow: 0 4px 12px rgba(23, 31, 76, .06); margin-bottom: 20px;
 }
 .card-title {
     font-size: 14.5px; font-weight: 700; color: #1a1a2e;
@@ -212,6 +288,13 @@ label[data-testid="stWidgetLabel"] p {
 .stTabs [aria-selected="true"] {
     background: #fff !important; color: #1a1a2e !important;
     box-shadow: 0 2px 8px rgba(0,0,0,.06) !important;
+}
+
+/* Better table container look */
+[data-testid="stDataFrame"] {
+    border: 1px solid #eceff8;
+    border-radius: 12px;
+    overflow: hidden;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -300,6 +383,9 @@ def render_header(title: str, subtitle: str) -> None:
             <p>{subtitle}</p>
           </div>
           <div>
+                        <span class="top-mini">🔎 Search</span>
+                        <span class="top-mini">🔔</span>
+                        <span class="top-mini">👤</span>
             <span class="top-badge">Best Model: <b>{best_mdl}</b></span>
             <span class="top-badge">F1-Macro: <b>{best_f1}%</b></span>
           </div>
@@ -309,8 +395,28 @@ def render_header(title: str, subtitle: str) -> None:
     )
 
 
+def render_page_banner(title: str, subtitle: str) -> None:
+    st.markdown(
+        f"""
+        <div style="
+            background: linear-gradient(90deg, rgba(59,68,209,.08) 0%, rgba(232,69,69,.08) 100%);
+            border: 1px solid #dde2fb;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin: 0 0 16px 0;
+        ">
+            <div style="font-size:13px; color:#6b7399; font-weight:700; letter-spacing:.5px; text-transform:uppercase;">Section</div>
+            <div style="font-size:20px; color:#1a1a2e; font-weight:800; margin-top:2px;">{title}</div>
+            <div style="font-size:13px; color:#6f7690; margin-top:2px;">{subtitle}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 if page == "dashboard":
     render_header("Good Morning, Doctor 👋", "AI-powered clinical diagnosis prediction · Spring 2026")
+    render_page_banner("Dashboard", "Overview of model performance, class distribution, and top feature impact")
 
     st.markdown(f"""
     <div class="stat-grid">
@@ -370,15 +476,27 @@ if page == "dashboard":
           <div class="tip-card"><div class="tip-icon">⚠️</div><div><span class="tip-b">Allergy Profile</span><p class="tip-p">Review known allergies before recommending medication.</p></div></div>
         </div>""", unsafe_allow_html=True)
 
-        st.markdown('<div class="card"><div class="card-title"><span class="ct-dot"></span>Class Distribution</div>', unsafe_allow_html=True)
-        for cls in target_le.classes_:
-            cnt = int((df[TARGET_COL] == cls).sum())
-            pct = cnt / len(df) * 100
-            st.markdown(f'<div class="bar-row"><div class="bar-lbl">{cls}</div><div class="bar-track"><div class="bar-fill" style="width:{pct:.1f}%"></div></div><div class="bar-pct">{cnt}</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="card"><div class="card-title"><span class="ct-dot"></span>Traffic Source</div>', unsafe_allow_html=True)
+        dist = df[TARGET_COL].value_counts()
+        donut_colors = ["#5a66f4", "#f59f00", "#22c58b", "#ff6b6b", "#9aa5c2"]
+        fig, ax = plt.subplots(figsize=(4.4, 3.2))
+        ax.pie(
+            dist.values,
+            colors=donut_colors[: len(dist)],
+            startangle=90,
+            counterclock=False,
+            wedgeprops={"width": 0.42, "edgecolor": "white"},
+        )
+        ax.set(aspect="equal")
+        st.pyplot(fig, clear_figure=True)
+        for cls, cnt in dist.items():
+            pct = (cnt / len(df)) * 100
+            st.markdown(f'<div class="bar-row"><div class="bar-lbl">{cls}</div><div class="bar-track"><div class="bar-fill blue" style="width:{pct:.1f}%"></div></div><div class="bar-pct">{pct:.1f}%</div></div>', unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 if page == "predict":
     render_header("Patient Prediction", "Enter patient characteristics to generate diagnosis and risk confidence")
+    render_page_banner("Predict", "Run diagnosis inference with confidence and export patient-level results")
 
     st.markdown('<div class="card"><div class="card-title"><span class="ct-dot"></span>🤖 Patient Diagnosis Predictor</div>', unsafe_allow_html=True)
     cmeta1, cmeta2 = st.columns([2, 1], gap="large")
@@ -485,6 +603,7 @@ if page == "predict":
 
 if page == "patients":
     render_header("Patients", "View all predicted patients and export accumulated prediction history")
+    render_page_banner("Patients", "Track prediction history and review diagnosis mix across saved patients")
 
     history_df = pd.DataFrame(st.session_state.prediction_history)
     if history_df.empty:
