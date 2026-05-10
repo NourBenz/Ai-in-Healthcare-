@@ -3,6 +3,7 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
@@ -11,33 +12,36 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import f1_score, accuracy_score
 
 # ── Config ─────────────────────────────────────────────────────────────────────
-DATA_PATH    = "AI_in_HealthCare_Dataset.csv"
-DROP_COLS    = ["Patient_ID", "Doctor_Name", "Hospital_Name"]
-TARGET_COL   = "Diagnosis"
+DATA_PATH    = "Breast_Cancer.csv"
+DROP_COLS    = []
+TARGET_COL   = "Status"
 RANDOM_STATE = 42
 
-st.set_page_config(page_title="MedAI Diagnosis", layout="wide", page_icon="🏥")
+st.set_page_config(page_title="Medico Diagnosis", layout="wide", page_icon="🏥")
 
 if "page" not in st.session_state:
     st.session_state.page = "dashboard"
 
 with st.sidebar:
     st.markdown("<div class='brand-orb'></div>", unsafe_allow_html=True)
-    st.markdown("### Devlas")
-    st.caption("Production")
+    st.markdown("### 🏥 Medico")
+    st.caption("Breast Cancer Diagnosis")
     nav_choice = st.radio(
         "Navigation",
-        ["Overview", "Predict", "Patients"],
-        index=["dashboard", "predict", "patients"].index(st.session_state.page),
+        ["Dashboard", "Dataset", "Predict", "Patients", "Reports"],
+        index=["dashboard", "dataset", "predict", "patients", "reports"].index(st.session_state.page) if st.session_state.page in ["dashboard", "dataset", "predict", "patients", "reports"] else 0,
         label_visibility="collapsed",
     )
-    st.markdown("---")
-    st.markdown("<div class='side-link'>Companies</div>", unsafe_allow_html=True)
-    st.markdown("<div class='side-link'>Account</div>", unsafe_allow_html=True)
-    st.markdown("<div class='side-link'>Settings</div>", unsafe_allow_html=True)
-    st.markdown("<div class='side-link'>Reports</div>", unsafe_allow_html=True)
+    
 
-page = "dashboard" if nav_choice.lower() == "overview" else nav_choice.lower()
+page_map = {
+    "Dashboard": "dashboard",
+    "Dataset": "dataset",
+    "Predict": "predict",
+    "Patients": "patients",
+    "Reports": "reports"
+}
+page = page_map.get(nav_choice, "dashboard")
 st.session_state.page = page
 
 # ── CSS ─────────────────────────────────────────────────────────────────────────
@@ -309,7 +313,10 @@ def load_data(path):
 @st.cache_resource
 def train_all(df):
     d = df.drop(columns=DROP_COLS).copy()
-    d["Allergies"] = d["Allergies"].fillna("None")
+    # Fill missing values in categorical columns
+    for col in d.select_dtypes(include=["object"]).columns:
+        if col != TARGET_COL:
+            d[col] = d[col].fillna("Unknown")
     X      = d.drop(columns=[TARGET_COL]).copy()
     y_text = d[TARGET_COL].copy()
     cat_cols = X.select_dtypes(include=["object"]).columns.tolist()
@@ -536,7 +543,9 @@ if page == "predict":
 
     if submitted:
         patient_df = pd.DataFrame([inputs]).reindex(columns=feat_cols)
-        patient_df["Allergies"] = patient_df["Allergies"].fillna("None")
+        # Fill missing values in categorical columns
+        for col in patient_df.select_dtypes(include=["object"]).columns:
+            patient_df[col] = patient_df[col].fillna("Unknown")
         try:
             enc = patient_df.copy()
             for col, le in encoders.items():
@@ -630,3 +639,181 @@ if page == "patients":
         mix = history_df["Predicted_Diagnosis"].value_counts()
         st.bar_chart(mix, color="#e84545")
         st.markdown("</div>", unsafe_allow_html=True)
+
+if page == "dataset":
+    render_header("Dataset Exploration", "Comprehensive analysis of Breast Cancer dataset features and distributions")
+    render_page_banner("Dataset Info", "Explore feature relationships, missing data, and statistical summaries")
+
+    st.markdown('<div class="card"><div class="card-title"><span class="ct-dot"></span>Dataset Overview</div>', unsafe_allow_html=True)
+    ds1, ds2, ds3, ds4 = st.columns(4)
+    with ds1:
+        st.metric("Total Records", len(df))
+    with ds2:
+        st.metric("Total Features", len(feat_cols))
+    with ds3:
+        st.metric("Classes", len(target_le.classes_))
+    with ds4:
+        st.metric("Missing Values", df.isnull().sum().sum())
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="card-title"><span class="ct-dot"></span>First 10 Records</div>', unsafe_allow_html=True)
+    st.dataframe(df.head(10), width="stretch", height=300)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="card-title"><span class="ct-dot"></span>Statistical Summary</div>', unsafe_allow_html=True)
+    st.dataframe(df.describe(), width="stretch")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2, gap="large")
+    with col1:
+        st.markdown('<div class="card"><div class="card-title"><span class="ct-dot"></span>Data Types</div>', unsafe_allow_html=True)
+        dtypes_df = pd.DataFrame({
+            "Column": df.columns,
+            "Type": df.dtypes.astype(str),
+            "Non-Null": df.notna().sum(),
+            "Null": df.isna().sum()
+        })
+        st.dataframe(dtypes_df, width="stretch", height=400)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with col2:
+        st.markdown('<div class="card"><div class="card-title"><span class="ct-dot"></span>Target Variable Distribution</div>', unsafe_allow_html=True)
+        target_dist = df[TARGET_COL].value_counts()
+        fig, ax = plt.subplots(figsize=(5, 3))
+        ax.bar(target_dist.index, target_dist.values, color=["#e84545", "#4c6ef5"])
+        ax.set_ylabel("Count")
+        ax.set_title(TARGET_COL)
+        st.pyplot(fig, clear_figure=True)
+        
+        for cls, cnt in target_dist.items():
+            pct = (cnt / len(df)) * 100
+            st.markdown(f'<div class="bar-row"><div class="bar-lbl">{cls}</div><div class="bar-track"><div class="bar-fill" style="width:{pct:.1f}%"></div></div><div class="bar-pct">{pct:.1f}%</div></div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="card-title"><span class="ct-dot"></span>Numerical Features Correlation</div>', unsafe_allow_html=True)
+    num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if num_cols:
+        corr_matrix = df[num_cols].corr()
+        fig, ax = plt.subplots(figsize=(10, 8))
+        sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap="coolwarm", center=0, ax=ax, cbar_kws={'shrink': 0.8})
+        st.pyplot(fig, clear_figure=True)
+    else:
+        st.info("No numerical features to display correlation.")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="card"><div class="card-title"><span class="ct-dot"></span>Feature Distributions</div>', unsafe_allow_html=True)
+    num_features = df.select_dtypes(include=[np.number]).columns.tolist()
+    if num_features:
+        selected_features = st.multiselect("Select features to visualize:", num_features, default=num_features[:3])
+        if selected_features:
+            cols = st.columns(len(selected_features))
+            for idx, feature in enumerate(selected_features):
+                with cols[idx]:
+                    fig, ax = plt.subplots(figsize=(4, 3))
+                    ax.hist(df[feature], bins=30, color="#e84545", alpha=0.7, edgecolor="black")
+                    ax.set_title(feature)
+                    ax.set_ylabel("Frequency")
+                    st.pyplot(fig, clear_figure=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+if page == "reports":
+    render_header("Reports & Statistics", "Comprehensive performance analytics and clinical insights")
+    render_page_banner("Statistics", "Detailed model evaluation, predictions analysis, and pattern discovery")
+
+    st.markdown('<div class="card"><div class="card-title"><span class="ct-dot"></span>Model Performance Dashboard</div>', unsafe_allow_html=True)
+    
+    rep1, rep2, rep3, rep4 = st.columns(4)
+    with rep1:
+        best_model = max(metrics, key=lambda m: metrics[m]["f1"])
+        st.metric("🏆 Best Model", best_model, metrics[best_model]["f1"].__str__() + "%")
+    with rep2:
+        st.metric("📊 Avg Accuracy", f"{np.mean([m['accuracy'] for m in metrics.values()]):.1f}%")
+    with rep3:
+        st.metric("📈 Avg F1-Macro", f"{np.mean([m['f1'] for m in metrics.values()]):.1f}%")
+    with rep4:
+        st.metric("🔍 Total Features", len(feat_cols))
+
+    tab1, tab2, tab3 = st.tabs(["Performance Metrics", "Feature Analysis", "Prediction Analytics"])
+
+    with tab1:
+        st.subheader("Model Comparison Detailed Metrics")
+        metrics_table = pd.DataFrame([
+            {"Model": m, "Accuracy (%)": v["accuracy"], "F1-Macro (%)": v["f1"]}
+            for m, v in metrics.items()
+        ]).set_index("Model")
+        st.dataframe(metrics_table, width="stretch")
+
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
+        models_list = list(metrics.keys())
+        accuracies = [metrics[m]["accuracy"] for m in models_list]
+        f1s = [metrics[m]["f1"] for m in models_list]
+        
+        ax1.bar(models_list, accuracies, color="#4c6ef5", alpha=0.7)
+        ax1.set_title("Accuracy by Model")
+        ax1.set_ylabel("Accuracy (%)")
+        ax1.set_ylim([0, 100])
+        
+        ax2.bar(models_list, f1s, color="#e84545", alpha=0.7)
+        ax2.set_title("F1-Macro by Model")
+        ax2.set_ylabel("F1-Macro (%)")
+        ax2.set_ylim([0, 100])
+        
+        st.pyplot(fig, clear_figure=True)
+
+    with tab2:
+        st.subheader("Feature Importance Analysis")
+        rf_model = models["Random Forest"]
+        importance_df = pd.DataFrame({
+            "Feature": feat_cols,
+            "Importance": rf_model.feature_importances_
+        }).sort_values("Importance", ascending=False)
+        
+        st.dataframe(importance_df, width="stretch")
+        
+        fig, ax = plt.subplots(figsize=(10, 6))
+        top_n = min(15, len(importance_df))
+        top_features = importance_df.head(top_n)
+        ax.barh(range(len(top_features)), top_features["Importance"], color="#e84545", alpha=0.7)
+        ax.set_yticks(range(len(top_features)))
+        ax.set_yticklabels(top_features["Feature"])
+        ax.set_xlabel("Importance Score")
+        ax.set_title(f"Top {top_n} Most Important Features")
+        ax.invert_yaxis()
+        st.pyplot(fig, clear_figure=True)
+
+    with tab3:
+        st.subheader("Prediction History Analysis")
+        history_df = pd.DataFrame(st.session_state.prediction_history)
+        
+        if not history_df.empty:
+            pred1, pred2 = st.columns(2)
+            with pred1:
+                st.metric("Total Predictions Made", len(history_df))
+            with pred2:
+                pred_diagnosis = history_df["Predicted_Diagnosis"].value_counts()
+                st.metric("Unique Diagnoses", len(pred_diagnosis))
+            
+            st.subheader("Diagnosis Distribution")
+            fig, ax = plt.subplots(figsize=(8, 4))
+            pred_diagnosis.plot(kind='pie', ax=ax, autopct='%1.1f%%', colors=["#e84545", "#4c6ef5"])
+            st.pyplot(fig, clear_figure=True)
+            
+            st.subheader("Confidence Score Distribution")
+            if "Confidence" in history_df.columns:
+                fig, ax = plt.subplots(figsize=(8, 4))
+                ax.hist(history_df["Confidence"], bins=20, color="#4c6ef5", alpha=0.7, edgecolor="black")
+                ax.set_xlabel("Confidence Score")
+                ax.set_ylabel("Frequency")
+                ax.set_title("Distribution of Prediction Confidence Scores")
+                st.pyplot(fig, clear_figure=True)
+            
+            st.subheader("Model Usage")
+            if "Model" in history_df.columns:
+                model_counts = history_df["Model"].value_counts()
+                fig, ax = plt.subplots(figsize=(8, 4))
+                model_counts.plot(kind='bar', ax=ax, color="#e84545", alpha=0.7)
+                ax.set_title("Model Usage Frequency")
+                ax.set_ylabel("Count")
+                st.pyplot(fig, clear_figure=True)
+        else:
+            st.info("No predictions made yet. Make predictions to see analytics.")

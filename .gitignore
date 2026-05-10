@@ -1,0 +1,98 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+.venv
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Streamlit
+.streamlit/
+.streamlit/secrets.toml
+streamlit_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+.jupyter/
+*.ipynb
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Cache
+.cache/
+.pytest_cache/
+*.cache
+
+# Data (keep csv for reference)
+*.csv
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+*.exe
+
+# Models (if saved separately)
+models/
+*.pkl
+*.joblib
+*.h5
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# System files
+.env.local
+.env.*.local
+
+# Project specific
+predictions/
+exports/
+reports/
